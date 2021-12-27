@@ -1,51 +1,31 @@
 class UsersController < ApplicationController
-  before_action :set_user, only: [:show, :update, :destroy]
-
   # GET /users
   def index
-    @users = User.all
+    
+    api_url = "https://mindicador.cl/api/uf/#{(params[:date])}"
+    response = HTTParty.get(api_url)
+    user = JSON.parse(response.read_body)
 
-    render json: @users, only:[:name]
-  end
-
-  # GET /users/1
-  def show
-    render json: @user
-  end
-
-  # POST /users
-  def create
-    @user = User.new(user_params)
-
-    if @user.save
-      render json: @user, status: :created, location: @user
-    else
-      render json: @user.errors, status: :unprocessable_entity
+    
+    if user['serie'][0].nil?
+      return render json: {mensaje:"Valor no encontrado para esa fecha"}
+    else 
+      if request.headers['X-CLIENT'].present?
+        Search.create(date_query: params[:date], name: request.headers['X-CLIENT'])
+        render json: user["serie"][0]["valor"]
+      else
+        render json: "Cliente no reconocido"
+      end
     end
   end
 
-  # PATCH/PUT /users/1
-  def update
-    if @user.update(user_params)
-      render json: @user
-    else
-      render json: @user.errors, status: :unprocessable_entity
-    end
+  def count_index
+    count = Search.where(name: params[:name]).count 
+    render json: count
   end
-
-  # DELETE /users/1
-  def destroy
-    @user.destroy
-  end
-
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_user
-      @user = User.find(params[:id])
-    end
-
-    # Only allow a trusted parameter "white list" through.
-    def user_params
-      params.require(:user).permit(:name, :consult)
-    end
 end
+
+  
+
+
+ 
